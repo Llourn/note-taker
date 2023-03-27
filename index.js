@@ -2,7 +2,6 @@ const express = require("express");
 const uniqid = require("uniqid");
 const fs = require("fs");
 const path = require("path");
-const db = require("./db/db.json");
 
 const app = express();
 const port = 5050;
@@ -64,16 +63,22 @@ app.post("/api/notes", (req, res) => {
 // delete notes from the database using the id
 app.delete("/api/notes/:id", (req, res) => {
   if (req.params.id) {
-    let newArray = db.filter((note) => note.id !== req.params.id);
-    fs.writeFile("./db/db.json", JSON.stringify(newArray), (err) => {
+    fs.readFile("./db/db.json", (err, data) => {
       if (err) {
-        res.json({
-          message: "There was an error deleting item from database.",
-          error: err,
-        });
+        res.json("There was an error reading the database.");
+        throw err;
       }
-      console.log("newArray", newArray);
-      res.json(JSON.stringify(newArray));
+      const currentData = JSON.parse(data);
+      let newArray = currentData.filter((note) => note.id !== req.params.id);
+      fs.writeFile("./db/db.json", JSON.stringify(newArray), (err) => {
+        if (err) {
+          res.json({
+            message: "There was an error deleting item from database.",
+            error: err,
+          });
+        }
+        res.json(JSON.stringify(newArray));
+      });
     });
   }
 });
