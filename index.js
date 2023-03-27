@@ -11,52 +11,70 @@ app.use(express.json());
 
 app.use(express.static(__dirname + "/public"));
 
+// serves the main html page
 app.get("/", (req, res) => {
   const newPath = path.join(__dirname, "/public/index.html");
   res.sendFile(newPath);
 });
 
+// serves the notes html page
 app.get("/notes", (req, res) => {
   res.sendFile(path.join(__dirname, "/public/notes.html"));
 });
 
+// returns all notes as an array
 app.get("/api/notes", (req, res) => {
-  console.log("GETTING NOTES");
   fs.readFile("./db/db.json", (err, data) => {
-    if (err) throw err;
-    console.log("GETTING - COMPLETED");
+    if (err) {
+      res.json("There was an error reading the database.");
+      throw err;
+    }
     res.json(JSON.parse(data));
   });
 });
 
+// adds note the database with a unique id.
 app.post("/api/notes", (req, res) => {
-  console.log("POSTING NOTE");
-  let dataArray = [];
-  if (db && db.length > 0) {
-    dataArray = [...db];
-  }
+  fs.readFile("./db/db.json", (err, data) => {
+    if (err) {
+      res.json({
+        message: "There was an error reading from database.",
+        error: err,
+      });
+    }
+    let currentData = JSON.parse(data);
+    let newData = [...currentData];
 
-  const note = { ...req.body, id: uniqid() };
+    const note = { ...req.body, id: uniqid() };
 
-  dataArray.push(note);
+    newData.push(note);
 
-  fs.writeFile("./db/db.json", JSON.stringify(dataArray), (err) => {
-    if (err) throw err;
+    fs.writeFile("./db/db.json", JSON.stringify(newData), (err) => {
+      if (err) {
+        res.json({
+          message: "There was an error writing to the database.",
+          error: err,
+        });
+      }
+    });
+    res.json(newData);
   });
-
-  res.json(dataArray);
 });
 
+// delete notes from the database using the id
 app.delete("/api/notes/:id", (req, res) => {
-  console.log("DELETING NOTE");
   if (req.params.id) {
     let newArray = db.filter((note) => note.id !== req.params.id);
     fs.writeFile("./db/db.json", JSON.stringify(newArray), (err) => {
-      if (err) throw err;
-      console.log("COMPLETED");
-      res.json(newArray);
+      if (err) {
+        res.json({
+          message: "There was an error deleting item from database.",
+          error: err,
+        });
+      }
+      console.log("newArray", newArray);
+      res.json(JSON.stringify(newArray));
     });
-    console.log("COMPLETED?");
   }
 });
 
