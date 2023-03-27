@@ -22,7 +22,11 @@ app.get("/notes", (req, res) => {
 
 app.get("/api/notes", (req, res) => {
   console.log("GETTING NOTES");
-  res.json(db);
+  fs.readFile("./db/db.json", (err, data) => {
+    if (err) throw err;
+    console.log("GETTING - COMPLETED");
+    res.json(JSON.parse(data));
+  });
 });
 
 app.post("/api/notes", (req, res) => {
@@ -36,7 +40,7 @@ app.post("/api/notes", (req, res) => {
 
   dataArray.push(note);
 
-  fs.writeFileSync("./db/db.json", JSON.stringify(dataArray), (err) => {
+  fs.writeFile("./db/db.json", JSON.stringify(dataArray), (err) => {
     if (err) throw err;
   });
 
@@ -47,10 +51,12 @@ app.delete("/api/notes/:id", (req, res) => {
   console.log("DELETING NOTE");
   if (req.params.id) {
     let newArray = db.filter((note) => note.id !== req.params.id);
-    fs.writeFileSync("./db/db.json", JSON.stringify(newArray), (err) => {
+    fs.writeFile("./db/db.json", JSON.stringify(newArray), (err) => {
       if (err) throw err;
+      console.log("COMPLETED");
+      res.json(newArray);
     });
-    res.json(newArray);
+    console.log("COMPLETED?");
   }
 });
 
