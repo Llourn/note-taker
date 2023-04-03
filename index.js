@@ -1,10 +1,10 @@
 const express = require("express");
 const uniqid = require("uniqid");
-const fs = require("fs");
+const fs = require("fs/promises");
 const path = require("path");
 
 const app = express();
-const port = process.env.PORT || 5050;
+const PORT = process.env.PORT || 5050;
 
 app.use(express.json());
 
@@ -23,65 +23,61 @@ app.get("/notes", (req, res) => {
 
 // returns all notes as an array
 app.get("/api/notes", (req, res) => {
-  fs.readFile("./db/db.json", (err, data) => {
-    if (err) {
+  fs.readFile("./db/db.json")
+    .then((data) => {
+      res.json(JSON.parse(data));
+    })
+    .catch((err) => {
+      console.error("There was an error reading the database.", err);
       res.json("There was an error reading the database.");
-      throw err;
-    }
-    res.json(JSON.parse(data));
-  });
+    });
 });
 
 // adds note the database with a unique id.
-app.post("/api/notes", (req, res) => {
-  fs.readFile("./db/db.json", (err, data) => {
-    if (err) {
-      res.json({
-        message: "There was an error reading from database.",
-        error: err,
-      });
-    }
-    let currentData = JSON.parse(data);
-    let newData = [...currentData];
+app.post("/api/notes", async (req, res) => {
+  let notesList = [];
 
-    const note = { ...req.body, id: uniqid() };
+  try {
+    const data = await fs.readFile("./db/db.json");
+    notesList = JSON.parse(data);
+  } catch (err) {
+    console.error("There was an error reading the database.", err);
+  }
 
-    newData.push(note);
+  const note = { ...req.body, id: uniqid() };
+  notesList.push(note);
 
-    fs.writeFile("./db/db.json", JSON.stringify(newData), (err) => {
-      if (err) {
-        res.json({
-          message: "There was an error writing to the database.",
-          error: err,
-        });
-      }
-    });
-    res.json(newData);
-  });
-});
-
-// delete notes from the database using the id
-app.delete("/api/notes/:id", (req, res) => {
-  if (req.params.id) {
-    fs.readFile("./db/db.json", (err, data) => {
-      if (err) {
-        res.json("There was an error reading the database.");
-        throw err;
-      }
-      const currentData = JSON.parse(data);
-      let newArray = currentData.filter((note) => note.id !== req.params.id);
-      fs.writeFile("./db/db.json", JSON.stringify(newArray), (err) => {
-        if (err) {
-          res.json({
-            message: "There was an error deleting item from database.",
-            error: err,
-          });
-        }
-        res.json(JSON.stringify(newArray));
-      });
-    });
+  try {
+    await fs.writeFile("./db/db.json", JSON.stringify(notesList));
+    res.json(notesList);
+  } catch (err) {
+    console.error("There was an error writing to the database.", err);
+    res.json("There was an error writing to the database.");
   }
 });
 
-app.listen(port);
-console.log("⚡️ Server started on port", port);
+// delete notes from the database using the id
+app.delete("/api/notes/:id", async (req, res) => {
+  let notesList = [];
+
+  try {
+    const data = await fs.readFile("./db/db.json");
+    notesList = JSON.parse(data);
+  } catch (err) {
+    console.error("There was an error reading the database.", err);
+  }
+
+  notesList = notesList.filter((note) => note.id !== req.params.id);
+
+  try {
+    await fs.writeFile("./db/db.json", JSON.stringify(notesList));
+    res.json(notesList);
+  } catch (err) {
+    console.error("There was an error writing to the database.", err);
+    res.json("There was an error writing to the database.");
+  }
+});
+
+app.listen(PORT, () => {
+  console.log("⚡️ Server started on port", PORT);
+});
